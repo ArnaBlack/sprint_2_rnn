@@ -33,29 +33,37 @@ class LSTMLanguageModel(nn.Module):
 
         device = next(self.parameters()).device
 
+        generated_seq = []
+        
+        # Получаем индекс токена завершения из словаря
+        eos_idx = self.word2idx[EOS_TOKEN]
+
         with torch.no_grad():
             current_tokens = start_tokens
             generated = start_tokens.copy()
             hidden = None
-            
+
             for _ in range(max_length):
+                context = current_tokens
                 # Преобразование в тензор
-                x = torch.tensor([current_tokens[-5:]], device=device)   # Берем последние 5 токенов
+                x = torch.tensor([context], device=device)
                 output, hidden = self.forward(x, hidden)
-                
+
                 # Получаем предсказание для последнего токена
                 logits = output[0, -1, :] / temperature
                 probs = torch.softmax(logits, dim=-1)
-                
+
                 # Сэмплируем следующий токен
                 next_token = torch.multinomial(probs, 1).item()
-                
-                if next_token == self.word2idx.get(EOS_TOKEN, 3):
+
+                if next_token == eos_idx:
                     break
-                    
+
                 generated.append(next_token)
                 current_tokens.append(next_token)
-            
+                generated_seq.append(next_token)
+
             # Преобразование индексов обратно в слова
-            generated_text = [self.idx2word.get(idx, UNK_TOKEN) for idx in generated]
-            return ' '.join(generated_text)
+            generated_full_text = ' '.join([self.idx2word.get(idx, UNK_TOKEN) for idx in generated])
+            generated_last_part_text = ' '.join([self.idx2word.get(idx, UNK_TOKEN) for idx in generated_seq])
+            return generated_full_text, generated_last_part_text

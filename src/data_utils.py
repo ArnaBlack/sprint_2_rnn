@@ -35,7 +35,7 @@ def load_and_clear_data():
     
     cleaned_texts = [clean_text(text) for text in texts if len(clean_text(text)) > 0]
 
-    print(f"Загружено {len(texts)} текстов, после очистки осталось {len(cleaned_texts)} текстов.")
+    print(f"✅ Загружено {len(texts)} текстов, после очистки осталось {len(cleaned_texts)} текстов.")
     print(f"Примеры очищенных текстов: {cleaned_texts[:5]}")
     return cleaned_texts
 
@@ -60,7 +60,7 @@ def save_tokenized(tokenized, filepath=TOKENIZED_FILE):
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(filepath, 'wb') as f:
         pickle.dump(tokenized, f)
-    print(f"Токенизированные данные сохранены в {filepath}")
+    print(f"✅ Токенизированные данные сохранены в {filepath}")
 
 
 # Загружает токенизированные данные из файла или выполняет токенизацию, если файл не найден
@@ -104,7 +104,7 @@ def create_sequences(tokenized_texts, max_seq_len=SEQ_LEN):
             y = tokens[i + 1 : i + 1 + current_len]
             
             # Контрольная проверка
-            assert len(x) == len(y), f"Длины не совпадают: {len(x)} vs {len(y)}"
+            assert len(x) == len(y), f"✅ Длины не совпадают: {len(x)} vs {len(y)}"
             
             X.append(x)
             Y.append(y)
