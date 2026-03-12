@@ -1,6 +1,7 @@
 # код lstm модели
 import torch
 import torch.nn as nn
+from .eval_utils import filter_special_tokens
 
 from .constants import BOS_TOKEN, EOS_TOKEN, UNK_TOKEN
 
@@ -64,6 +65,6 @@ class LSTMLanguageModel(nn.Module):
                 generated_seq.append(next_token)
 
             # Преобразование индексов обратно в слова
-            generated_full_text = ' '.join([self.idx2word.get(idx, UNK_TOKEN) for idx in generated])
-            generated_last_part_text = ' '.join([self.idx2word.get(idx, UNK_TOKEN) for idx in generated_seq])
+            generated_full_text = ' '.join([self.idx2word.get(idx, UNK_TOKEN) for idx in filter_special_tokens(generated, self.word2idx)])
+            generated_last_part_text = ' '.join([self.idx2word.get(idx, UNK_TOKEN) for idx in filter_special_tokens(generated_seq, self.word2idx)])
             return generated_full_text, generated_last_part_text

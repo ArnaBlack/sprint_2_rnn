@@ -3,7 +3,7 @@ import torch
 from .constants import PAD_TOKEN, UNK_TOKEN, BOS_TOKEN, EOS_TOKEN
 
 
-def prepare_generation_sample(seq, idx2word, split_ratio=0.75, min_seq_len=4, min_target_len=1):
+def prepare_generation_sample(seq, idx2word, word2idx, split_ratio=0.75, min_seq_len=4, min_target_len=1):
     """
     Подготавливает выборку для генерации текста:
     1. Удаляет паддинг
@@ -31,9 +31,8 @@ def prepare_generation_sample(seq, idx2word, split_ratio=0.75, min_seq_len=4, mi
         return None
     
     # Конвертация в текст
-    input_text = ' '.join([idx2word.get(idx, UNK_TOKEN) for idx in start_tokens])
-    target_text = ' '.join([idx2word.get(idx, UNK_TOKEN) for idx in target_tokens])
-    
+    input_text = ' '.join([idx2word.get(idx, UNK_TOKEN) for idx in filter_special_tokens(start_tokens, word2idx)])
+    target_text = ' '.join([idx2word.get(idx, UNK_TOKEN) for idx in filter_special_tokens(target_tokens, word2idx)])
     # Дополнительная проверка по количеству слов
     if len(input_text.split()) < 3 or len(target_text.split()) < 1:
         return None

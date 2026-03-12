@@ -3,7 +3,7 @@ from rouge_score import rouge_scorer
 import torch
 
 from .constants import ROUGE_SCORES_SAMPLES, UNK_TOKEN
-from .eval_utils import prepare_generation_sample, filter_special_tokens
+from .eval_utils import prepare_generation_sample
 
 
 def calculate_rouge(model, data_loader, idx2word, word2idx, device, need_print_generated_texts=False, num_samples=ROUGE_SCORES_SAMPLES):
@@ -32,22 +32,18 @@ def calculate_rouge(model, data_loader, idx2word, word2idx, device, need_print_g
                     break
 
                 # Подготовка выборки (удаление паддинга, разделение 75%/25%)
-                sample = prepare_generation_sample(inputs[i], idx2word)
+                sample = prepare_generation_sample(inputs[i], idx2word, word2idx)
                 
                 if sample is None:
                     continue
                 
                 start_tokens = sample['start_tokens']
                 target_tokens = sample['target_tokens']
+                input_text = sample['input_text']
+                target_text = sample['target_text']
 
                 # Генерация
                 generated_full_text, generated_last_part_text = model.generate(start_tokens, len(target_tokens))
-
-                # Фильтрация специальных токенов и конвертация в текст
-                target_tokens_filtered = filter_special_tokens(target_tokens, word2idx)
-                
-                input_text = ' '.join([idx2word.get(idx, UNK_TOKEN) for idx in start_tokens])
-                target_text = ' '.join([idx2word.get(idx, UNK_TOKEN) for idx in target_tokens_filtered])
 
 
                 if (need_print_generated_texts):
