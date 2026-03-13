@@ -2,6 +2,7 @@
 import re
 from datasets import load_dataset
 import nltk
+from tqdm import tqdm
 from nltk.tokenize import word_tokenize
 import os
 import pickle
