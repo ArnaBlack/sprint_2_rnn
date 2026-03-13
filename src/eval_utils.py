@@ -1,5 +1,4 @@
 # Утилиты для оценки моделей (LSTM и Transformer)
-import torch
 from .constants import PAD_TOKEN, UNK_TOKEN, BOS_TOKEN, EOS_TOKEN
 
 
