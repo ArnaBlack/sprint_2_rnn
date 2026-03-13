@@ -33,7 +33,8 @@ def clean_text(text):
 def load_and_clear_data():
     # Загрузка датасета
     dataset = load_dataset("sentiment140", trust_remote_code=True)
-    texts = dataset['train']['text'][:10000]  # Используем подмножество для демонстрации
+    texts = dataset['train']['text']
+    # [:10000]  # Используем подмножество для демонстрации
     
     cleaned_texts = [clean_text(text) for text in texts if len(clean_text(text)) > 0]
 
