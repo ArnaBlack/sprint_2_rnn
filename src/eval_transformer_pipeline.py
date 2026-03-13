@@ -58,7 +58,7 @@ class DistilGPT2Model:
         return generated_full_text.strip(), generated_last_part_text.strip()
 
 
-def evaluate_transformer(val_loader, idx2word, model_name='distilgpt2', device=None, num_examples=ROUGE_SCORES_SAMPLES, max_new_tokens=MAX_GENERATION_LENGTH):
+def evaluate_transformer(val_loader, idx2word, word2idx, model_name='distilgpt2', device=None, num_examples=ROUGE_SCORES_SAMPLES, max_new_tokens=MAX_GENERATION_LENGTH):
     model = DistilGPT2Model(model_name=model_name, device=device)
 
     rouge_metric = load_metric("rouge")
@@ -78,7 +78,7 @@ def evaluate_transformer(val_loader, idx2word, model_name='distilgpt2', device=N
 
             for i in range(inputs.shape[0]):
                 # Подготовка выборки (удаление паддинга, разделение 75%/25%)
-                sample = prepare_generation_sample(inputs[i], idx2word)
+                sample = prepare_generation_sample(inputs[i], idx2word, word2idx)
                 
                 if sample is None:
                     continue
