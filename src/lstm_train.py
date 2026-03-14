@@ -1,3 +1,5 @@
+import gc
+
 import torch
 from torch.nn.utils import clip_grad_norm_
 from .early_stopping import EarlyStopping
@@ -42,6 +44,9 @@ def train_model(model, train_loader, val_loader, loss_fn, optimizer, idx2word, w
         
         avg_train_loss = total_train_loss / len(train_loader)
         train_losses.append(avg_train_loss)
+
+        torch.cuda.empty_cache()
+        gc.collect()
         
         # Валидация и ROUGE-метрики
         avg_val_loss, rouge1, rouge2 = eval_lstm(model, val_loader, idx2word, word2idx, device, loss_fn)
