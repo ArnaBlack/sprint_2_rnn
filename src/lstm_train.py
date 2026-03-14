@@ -2,6 +2,8 @@ import gc
 
 import torch
 from torch.nn.utils import clip_grad_norm_
+
+from .constants import BATCH_SIZE
 from .early_stopping import EarlyStopping
 from .eval_lstm import eval_lstm
 
@@ -9,8 +11,7 @@ from .eval_lstm import eval_lstm
 from tqdm import tqdm
 
 def train_model(model, train_loader, val_loader, loss_fn, optimizer, idx2word, word2idx, num_epochs=10, device=None, early_stopping_patience=3):
-    if device is None:
-        device = next(model.parameters()).device
+    device = next(model.parameters()).device
 
     early_stopping = EarlyStopping(patience=early_stopping_patience, min_delta=0.001, restore_best_weights=True)    
     
@@ -24,7 +25,8 @@ def train_model(model, train_loader, val_loader, loss_fn, optimizer, idx2word, w
         
         pbar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs} [Train]')
 
-        for batch in pbar:
+        for batch_idx, batch in enumerate(pbar):
+
             inputs = batch['input'].to(device)  
             labels = batch['label'].to(device)
             
@@ -38,6 +40,11 @@ def train_model(model, train_loader, val_loader, loss_fn, optimizer, idx2word, w
             loss.backward()
             clip_grad_norm_(model.parameters(), max_norm=1.0) # Градиентный клиппинг для LSTM
             optimizer.step()
+
+            if batch_idx == 0:
+                print(f"\n[Epoch {epoch+1}, Batch {batch_idx}]")
+                print(f"  Allocated: {torch.cuda.memory_allocated(0)/1024**3:.2f} GB")
+                print(f"  Reserved: {torch.cuda.memory_reserved(0)/1024**3:.2f} GB")
             
             total_train_loss += loss.item()
             pbar.set_postfix({'loss': f'{loss.item():.4f}'})

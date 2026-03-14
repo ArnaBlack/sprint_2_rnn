@@ -1,6 +1,7 @@
 # замер метрик lstm модели
 from rouge_score import rouge_scorer
 import torch
+from tqdm import tqdm
 
 from .constants import ROUGE_SCORES_SAMPLES, UNK_TOKEN
 from .eval_utils import prepare_generation_sample
@@ -19,17 +20,15 @@ def calculate_rouge(model, data_loader, idx2word, word2idx, device, need_print_g
     rouge2_f1 = []
     examples_shown = 0
 
+    pbar = tqdm(data_loader, desc="Calculating ROUGE scores")
+
     with torch.no_grad():
-        for batch in data_loader:
-            if examples_shown >= num_samples:
-                break
+        for batch in pbar:
 
             inputs = batch['input'].to(device)
             batch_size = inputs.shape[0]
 
             for i in range(batch_size):
-                if examples_shown >= num_samples:
-                    break
 
                 # Подготовка выборки (удаление паддинга, разделение 75%/25%)
                 sample = prepare_generation_sample(inputs[i], idx2word, word2idx)
@@ -51,17 +50,17 @@ def calculate_rouge(model, data_loader, idx2word, word2idx, device, need_print_g
                         print("\n" + "="*60)
                         print("🥑Примеры генерации модели (LSTM)")
                         print("="*60)
-
-                    print(f"\n[Пример {examples_shown + 1}]")
-                    print(f"Вход (75%):     {input_text}")
-                    print(f"Цель (25%):     {target_text}")
-                    print(f"Предсказание:   {generated_last_part_text}")
-                    print(f"Полное предсказание:   {generated_full_text}")
-                    print("="*60)  
+                    if examples_shown < num_samples:   
+                        print(f"\n[Пример {examples_shown + 1}]")
+                        print(f"Вход (75%): {input_text}")
+                        print(f"Цель (25%): {target_text}")
+                        print(f"Предсказание: {generated_last_part_text}")
+                        print(f"Полное предложение: {generated_full_text}")
+                        print("="*60)  
 
 
                 # Метрики
-                scores = scorer.score(target_text, generated_full_text)
+                scores = scorer.score(target_text, generated_last_part_text)
                 rouge1_f1.append(scores['rouge1'].fmeasure)
                 rouge2_f1.append(scores['rouge2'].fmeasure)
                 examples_shown += 1

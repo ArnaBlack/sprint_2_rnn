@@ -5,6 +5,44 @@ from torch.utils.data import Dataset
 
 from .constants import PAD_TOKEN, UNK_TOKEN, SEQ_LEN
 
+
+def collate_fn(batch):
+    # Находим максимальную длину в текущем батче
+    max_len = max(item['input'].size(0) for item in batch)
+    
+    inputs_padded = []
+    labels_padded = []
+    masks = []
+    lengths = []
+    
+    for item in batch:
+        seq_len = item['input'].size(0)
+        
+        # Паддим только до max_len в этом батче
+        pad_amount = max_len - seq_len
+        
+        x_padded = torch.nn.functional.pad(
+            item['input'], (0, pad_amount), value=0  # 0 = pad_idx
+        )
+        y_padded = torch.nn.functional.pad(
+            item['label'], (0, pad_amount), value=0
+        )
+        mask = torch.nn.functional.pad(
+            torch.ones(seq_len), (0, pad_amount), value=0
+        )
+        
+        inputs_padded.append(x_padded)
+        labels_padded.append(y_padded)
+        masks.append(mask)
+        lengths.append(seq_len)
+    
+    return {
+        'input': torch.stack(inputs_padded),
+        'label': torch.stack(labels_padded),
+        'attention_mask': torch.stack(masks),
+        'lengths': torch.tensor(lengths)
+    }
+
 class NextTokenDataset(Dataset):
     def __init__(self, X, Y, word2idx, max_len=SEQ_LEN):
         self.X = X
@@ -18,25 +56,15 @@ class NextTokenDataset(Dataset):
         return len(self.X)
     
     def __getitem__(self, idx):
-        x_tokens = self.X[idx][:self.max_len]
+    # Возвращаем "сырые" индексы, без паддинга
+        x_tokens = self.X[idx][:self.max_len]  # только обрезка если нужно
         y_tokens = self.Y[idx][:self.max_len]
         
-        # Преобразование в индексы
         x_indices = [self.word2idx.get(t, self.unk_idx) for t in x_tokens]
         y_indices = [self.word2idx.get(t, self.unk_idx) for t in y_tokens]
-
-        real_x_length = len(x_tokens)
-        real_y_length = len(y_tokens)
-        
-        # Padding до max_len
-        x_padded = x_indices + [self.pad_idx] * (self.max_len - real_x_length)
-        y_padded = y_indices + [self.pad_idx] * (self.max_len - real_y_length)
-        # Маска внимания (1 для реальных токенов, 0 для padding)
-        attention_mask = [1] * real_x_length + [0] * (self.max_len - real_x_length)
         
         return {
-            'input': torch.tensor(x_padded, dtype=torch.long),
-            'label': torch.tensor(y_padded, dtype=torch.long),
-            'attention_mask': torch.tensor(attention_mask, dtype=torch.float32),
-            'length': real_x_length
+            'input': torch.tensor(x_indices, dtype=torch.long),  # без паддинга!
+            'label': torch.tensor(y_indices, dtype=torch.long),
+            'length': len(x_indices)
         }

@@ -6,7 +6,7 @@ from .eval_utils import filter_special_tokens
 from .constants import BOS_TOKEN, EOS_TOKEN, UNK_TOKEN
 
 class LSTMLanguageModel(nn.Module):
-    def __init__(self, vocab_size, word2idx, idx2word,  embedding_dim=256, hidden_dim=128, num_layers=2, dropout=0.3):
+    def __init__(self, vocab_size, word2idx, idx2word,  embedding_dim=128, hidden_dim=128, num_layers=2, dropout=0.3):
         super().__init__()
         self.word2idx = word2idx
         self.idx2word = idx2word
@@ -40,15 +40,12 @@ class LSTMLanguageModel(nn.Module):
         eos_idx = self.word2idx[EOS_TOKEN]
 
         with torch.no_grad():
-            current_tokens = start_tokens
             generated = start_tokens.copy()
-            hidden = None
 
             for _ in range(max_length):
-                context = current_tokens
                 # Преобразование в тензор
-                x = torch.tensor([context], device=device)
-                output, hidden = self.forward(x, hidden)
+                x = torch.tensor([generated], device=device)
+                output, _ = self.forward(x)
 
                 # Получаем предсказание для последнего токена
                 logits = output[0, -1, :] / temperature
@@ -61,7 +58,6 @@ class LSTMLanguageModel(nn.Module):
                     break
 
                 generated.append(next_token)
-                current_tokens.append(next_token)
                 generated_seq.append(next_token)
 
             # Преобразование индексов обратно в слова
