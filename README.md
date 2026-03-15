@@ -1,44 +1,34 @@
 # Sprint 2: RNN Language Model
 
-Проект по разработке и обучению LSTM-модели для генерации текста на основе датасета Sentiment140.
+Проект по разработке и обучению LSTM-модели и предобученного трансформера DistilGPT2 для генерации текста на основе датасета Sentiment140.
 
-## 📋 Описание
-
-Данный проект представляет собой языковую модель на основе LSTM (Long Short-Term Memory), которая обучается предсказывать следующий токен в последовательности. Модель способна генерировать новые тексты на основе начальной фразы (seed).
-
-### Основные возможности
-
-- **Предобработка данных**: очистка текста, токенизация, создание последовательностей
-- **Обучение LSTM модели**: с использованием градиентного клиппинга и early stopping
-- **Генерация текста**: продолжение начальной фразы с использованием сэмплирования
-- **Оценка качества**: метрики ROUGE-1 и ROUGE-2 для оценки сгенерированного текста
-
-## 📁 Структура проекта
+## Структура проекта
 
 ```
 sprint_2_rnn/
 ├── data/
 │   └── tokenized_texts.pkl      # Токенизированные данные (сохраняются автоматически)
-├── models/                       # Директория для сохранения моделей
+├── models/
+│   └── lstm_model_weights.pth   # Сохранённые веса LSTM модели
 ├── src/
 │   ├── constants.py             # Константы проекта (токены, гиперпараметры)
-│   ├── data_utils.py            # Утилиты для загрузки и обработки данных
-│   ├── early_stopping.py        # Реализация early stopping
-│   ├── eval_lstm.py             # Функция оценки модели (loss + ROUGE)
+│   ├── data_utils.py            # Загрузка, очистка, токенизация данных, создание последовательностей
+│   ├── early_stopping.py        # Реализация early stopping с восстановлением лучших весов
+│   ├── eval_lstm.py             # Оценка LSTM модели (loss + ROUGE)
 │   ├── eval_transformer_pipeline.py  # Оценка Transformer модели (DistilGPT2)
-│   ├── eval_utils.py            # Общие утилиты для оценки (подготовка выборок)
-│   ├── generate_examples_lstm.py # Генерация примеров текста
-│   ├── lstm_model.py            # Архитектура LSTM модели
-│   ├── lstm_test.py             # Тестирование модели
-│   ├── lstm_train.py            # Обучение модели
-│   ├── next_token_dataset.py    # PyTorch Dataset для next token prediction
-│   └── rouge_scores_lstm.py     # Расчёт ROUGE метрик для LSTM
-├── requirements_sprint_2.txt    # Зависимости проекта
+│   ├── eval_utils.py            # Общие утилиты для оценки (подготовка выборок, фильтрация токенов)
+│   ├── lstm_model.py            # Архитектура LSTM модели с методом генерации текста
+│   ├── lstm_test.py             # Финальное тестирование модели на тестовой выборке
+│   ├── lstm_train.py            # Обучение модели с градиентным клиппингом и прогресс-баром
+│   ├── lstm_utils.py            # Утилиты для сохранения весов модели
+│   ├── next_token_dataset.py    # PyTorch Dataset и collate_fn для next token prediction
+│   └── rouge_scores_lstm.py     # Расчёт ROUGE-1 и ROUGE-2 метрик для LSTM
+├── requirements.txt             # Зависимости проекта
 ├── solution.ipynb               # Jupyter notebook с решением
 └── README.md                    # Документация
 ```
 
-## 🔧 Компоненты
+## Компоненты
 
 ### `constants.py`
 Определяет основные константы проекта:
@@ -57,11 +47,11 @@ sprint_2_rnn/
 
 ### `lstm_model.py`
 Класс `LSTMLanguageModel`:
-- Embedding слой (256 dim)
+- Embedding слой (128 dim)
 - 2 слоя LSTM (128 hidden units)
 - Dropout (0.3)
 - Linear слой для предсказания следующего токена
-- Метод `generate()` для генерации текста с temperature sampling
+- Метод `generate()` для генерации текста
 
 ### `next_token_dataset.py`
 Класс `NextTokenDataset` (наследует `torch.utils.data.Dataset`):
@@ -104,154 +94,12 @@ sprint_2_rnn/
 - Финальная оценка на тестовой выборке (10%)
 - Вывод Test Loss, ROUGE-1, ROUGE-2
 
-### `generate_examples_lstm.py`
-Функция `generate_examples()`:
-- Генерация текста для заданных seed-фраз
-- Temperature sampling (по умолчанию 0.8)
-- Фильтрация специальных токенов из вывода
+### `lstm_utils.py`
+Утилиты для работы с моделью:
+- `save_model_weight(model)` - сохранение весов модели в `models/lstm_model_weights.pth`
 
-## 🚀 Установка и запуск
-
-### 1. Установка зависимостей
-
-```bash
-pip install -r requirements_sprint_2.txt
-```
-
-### 2. Запуск обучения
-
-Пример использования в Jupyter notebook или Python скрипте:
-
-```python
-from src.data_utils import (
-    load_and_clear_data, 
-    load_or_tokenize, 
-    create_sequences, 
-    create_data_split, 
-    build_vocab
-)
-from src.next_token_dataset import NextTokenDataset
-from src.lstm_model import LSTMLanguageModel
-from src.lstm_train import train_model
-from src.lstm_test import test_model
-from src.generate_examples_lstm import generate_examples
-import torch
-from torch.utils.data import DataLoader
-from torch.nn import CrossEntropyLoss
-
-# Константы
-from src.constants import BATCH_SIZE, SEQ_LEN
-
-# 1. Загрузка и подготовка данных
-texts = load_and_clear_data()
-tokenized = load_or_tokenize(texts)
-X, Y = create_sequences(tokenized)
-X_train, Y_train, X_val, Y_val, X_test, Y_test = create_data_split(X, Y)
-
-# 2. Построение словаря
-word2idx, idx2word = build_vocab(tokenized)
-vocab_size = len(word2idx)
-
-# 3. Создание DataLoader
-train_dataset = NextTokenDataset(X_train, Y_train, word2idx)
-val_dataset = NextTokenDataset(X_val, Y_val, word2idx)
-test_dataset = NextTokenDataset(X_test, Y_test, word2idx)
-
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
-test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
-
-# 4. Инициализация модели
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = LSTMLanguageModel(
-    vocab_size=vocab_size,
-    word2idx=word2idx,
-    idx2word=idx2word,
-    embedding_dim=256,
-    hidden_dim=128,
-    num_layers=2,
-    dropout=0.3
-).to(device)
-
-# 5. Обучение
-loss_fn = CrossEntropyLoss(ignore_index=0)  # 0 = PAD_TOKEN
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-train_losses, val_losses = train_model(
-    model=model,
-    train_loader=train_loader,
-    val_loader=val_loader,
-    loss_fn=loss_fn,
-    optimizer=optimizer,
-    idx2word=idx2word,
-    word2idx=word2idx,
-    num_epochs=10,
-    device=device,
-    early_stopping_patience=3
-)
-
-# 6. Тестирование
-test_model(model, test_loader, idx2word, word2idx, device, loss_fn)
-
-# 7. Генерация примеров
-seed_texts = ["i love", "i hate", "this is", "the best"]
-generate_examples(model, seed_texts, word2idx, max_length=20, temperature=0.8, device=device)
-```
-
-## 📊 Метрики
-
-Модель оценивается по следующим метрикам:
-
-- **Loss** - Cross-Entropy loss между предсказанными и истинными токенами
-- **ROUGE-1** - F1 мера пересечения unigram между сгенерированным и целевым текстом
-- **ROUGE-2** - F1 мера пересечения bigram между сгенерированным и целевым текстом
-
-## ⚙️ Гиперпараметры
-
-| Параметр | Значение |
-|----------|----------|
-| Размер словаря | ~10,000 (зависит от данных) |
-| Embedding dim | 256 |
-| Hidden dim | 128 |
-| Число слоёв LSTM | 2 |
-| Dropout | 0.3 |
-| Batch size | 128 |
-| Макс. длина последовательности | 64 |
-| Learning rate | 0.001 |
-| Optimizer | Adam |
-| Early stopping patience | 3 |
-
-## 📝 Примечания
-
-- Датасет Sentiment140 загружается через `datasets.load_dataset()`
-- Первые 10,000 текстов используются для обучения
-- Токенизированные данные сохраняются в `data/tokenized_texts.pkl` для ускорения последующих запусков
-- Модель использует teacher forcing во время обучения
-- Во время генерации применяется temperature sampling для разнообразия выходных текстов
-
-## 🎯 Примеры генерации
-
-После обучения модель может генерировать тексты на основе начальной фразы:
-
-```
-🌱 Seed: "i love"
-🤖 Output: this movie is so good and i love it
-
-🌱 Seed: "i hate"
-🤖 Output: this film it is not funny at all
-
-🌱 Seed: "this is"
-🤖 Output: a must see for anyone who loves movies
-```
-
-## 📚 Зависимости
-
-Основные библиотеки:
-- `torch` - фреймворк для глубокого обучения
-- `datasets` - загрузка датасетов
-- `nltk` - токенизация текста
-- `rouge_score` - расчёт ROUGE метрик
-- `scikit-learn` - разделение данных
-- `tqdm` - прогресс-бары
-
-Полный список зависимостей в `requirements_sprint_2.txt`.
+### `eval_transformer_pipeline.py`
+Оценка Transformer модели (DistilGPT2):
+- Класс `DistilGPT2Model` - обёртка для модели с методом `generate()`
+- Функция `test_transformer()` - финальная оценка на тестовой выборке
+- Функция `evaluate_transformer()` - оценка на валидационной выборке
